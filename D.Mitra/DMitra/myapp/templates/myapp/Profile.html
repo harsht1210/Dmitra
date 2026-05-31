@@ -1,0 +1,290 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>My Account | D. Mitra</title>
+
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Jost:wght@300;400;500;600&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="{% static 'css/style.css' %}">
+
+    <style>
+        .order-card {
+            background-color: #050505;
+            padding: 3rem;
+            border-radius: 4px;
+        }
+
+        .avatar-circle {
+            width: 60px;
+            height: 60px;
+            background: linear-gradient(135deg, #d33f21, #cf5d00);
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1.8rem;
+            font-weight: 500;
+            color: #fff;
+            margin-bottom: 1.5rem;
+        }
+
+        .profile-nav-link {
+            transition: all 0.3s ease;
+            padding: 12px 15px !important;
+            border-left: 2px solid transparent !important;
+            margin-bottom: 5px;
+        }
+
+        .profile-nav-link:hover {
+            background-color: #111 !important;
+            border-left: 2px solid #555 !important;
+            color: #fff !important;
+        }
+
+        .profile-nav-link.active {
+            background-color: #0a0a0a !important;
+            border-left: 2px solid #d33f21 !important;
+            color: #fff !important;
+            font-weight: 500 !important;
+        }
+
+        .table {
+            --bs-table-bg: transparent;
+            --bs-table-color: #fff;
+            margin-bottom: 0;
+        }
+
+        .table-hover tbody tr:hover td {
+            background-color: #0a0a0a;
+            color: #fff;
+        }
+
+        .badge-processing {
+            background-color: #d33f21;
+            color: #fff;
+            padding: 6px 14px;
+            font-weight: 400;
+            font-size: 0.75rem;
+            letter-spacing: 0.5px;
+        }
+
+        .badge-shipped {
+            background-color: var(--text-grey, #666);
+            color: #fff;
+            padding: 6px 14px;
+            font-weight: 400;
+            font-size: 0.75rem;
+            letter-spacing: 0.5px;
+        }
+
+        .badge-delivered {
+            background-color: var(--bg-olive-dark, #373014);
+            color: #fff;
+            padding: 6px 14px;
+            font-weight: 400;
+            font-size: 0.75rem;
+            letter-spacing: 0.5px;
+        }
+
+        #cartToggle {
+            display: none;
+        }
+
+        .cart-sidebar {
+            position: fixed;
+            top: 0;
+            right: -400px;
+            width: 400px;
+            height: 100vh;
+            background: #000;
+            z-index: 1050;
+            transition: 0.4s;
+        }
+
+        #cartToggle:checked~.cart-sidebar {
+            right: 0;
+        }
+
+        .empty-cart-icon {
+            font-size: 3rem;
+            color: #333;
+            margin-bottom: 1rem;
+            display: block;
+        }
+    </style>
+</head>
+
+<body>
+
+    <nav class="navbar navbar-expand-lg fixed-top">
+        <div class="container-fluid px-lg-4">
+            <a class="navbar-brand text-white text-decoration-none fs-5 letter-spacing-1" href="{% url 'home' %}">
+                D. Mitra
+            </a>
+
+            <div class="d-flex align-items-center gap-4">
+                <a href="{% url 'products' %}" class="nav-link text-white">Shop</a>
+
+                <a href="{% url 'profile' %}" class="nav-link text-white">
+                    {{ user.first_name|default:user.username }}
+                </a>
+
+                <a href="{% url 'logout' %}" class="nav-link text-secondary hover-white">Logout</a>
+            </div>
+        </div>
+    </nav>
+
+    <div class="container py-5" style="margin-top: 100px;">
+        <div class="row g-5">
+
+            <div class="col-lg-3">
+                <div class="avatar-circle">
+                    {{ user.first_name|default:user.username|make_list|first|upper }}
+                </div>
+                <h3 class="text-white fs-4">Hi, {{ user.first_name|default:user.username|title }}</h3>
+                <p class="text-secondary x-small text-uppercase letter-spacing-1 mb-4">Account Member</p>
+
+                <div class="list-group list-group-flush border-top border-secondary pt-4">
+                    <a href="{% url 'profile' %}"
+                        class="list-group-item bg-transparent border-0 profile-nav-link active">
+                        Order History
+                    </a>
+                    <a href="#" class="list-group-item bg-transparent text-secondary border-0 profile-nav-link">
+                        Profile Settings
+                    </a>
+                    <a href="#" class="list-group-item bg-transparent text-secondary border-0 profile-nav-link">
+                        Saved Addresses
+                    </a>
+                    <a href="{% url 'logout' %}"
+                        class="list-group-item bg-transparent text-secondary border-0 profile-nav-link mt-4">
+                        Log Out
+                    </a>
+                </div>
+            </div>
+
+            <div class="col-lg-9">
+                <div class="order-card border border-secondary shadow-lg">
+                    <div
+                        class="d-flex justify-content-between align-items-center mb-4 pb-3 border-bottom border-secondary">
+                        <h2 class="text-white m-0 fs-3">Recent Orders</h2>
+                        <a href="{% url 'products' %}"
+                            class="text-secondary text-decoration-underline x-small text-uppercase hover-white">Continue
+                            Shopping</a>
+                    </div>
+
+                    {% if orders %}
+                    <div class="table-responsive">
+                        <table class="table table-hover align-middle">
+                            <thead>
+                                <tr class="text-secondary x-small text-uppercase letter-spacing-1">
+                                    <th class="border-secondary pb-3 font-weight-300">Order ID</th>
+                                    <th class="border-secondary pb-3 font-weight-300">Date Placed</th>
+                                    <th class="border-secondary pb-3 font-weight-300">Status</th>
+                                    <th class="text-end border-secondary pb-3 font-weight-300">Total Amount</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for order in orders %}
+                                <tr>
+                                    <td class="py-4 border-secondary text-white fw-bold">
+                                        #{{ order.id }}
+                                        <span class="d-block text-secondary x-small mt-1 fw-normal text-uppercase">
+                                            Paid via {{ order.payment_record.payment_method }}
+                                        </span>
+                                    </td>
+
+                                    <td class="py-4 border-secondary text-secondary">
+                                        {{ order.created_at|date:"M d, Y" }}
+
+                                        {% if order.payment_record.transaction_id %}
+                                        <span class="d-block text-secondary x-small mt-1 text-uppercase"
+                                            style="opacity: 0.5;">
+                                            Ref: {{ order.payment_record.transaction_id }}
+                                        </span>
+                                        {% endif %}
+                                    </td>
+
+                                    <td class="py-4 border-secondary">
+                                        {% if order.delivery_record.status == 'Processing' %}
+                                        <span class="badge-processing text-uppercase">Processing</span>
+                                        {% elif order.delivery_record.status == 'Shipped' %}
+                                        <span class="badge-shipped text-uppercase">Shipped</span>
+                                        {% elif order.delivery_record.status == 'Delivered' %}
+                                        <span class="badge-delivered text-uppercase">Delivered</span>
+                                        {% endif %}
+                                    </td>
+
+                                    <td class="py-4 border-secondary text-end fw-bold text-white fs-5">
+                                        Rs. {{ order.get_cart_total|default:"0.00" }}
+                                    </td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                    {% else %}
+                    <div class="text-center py-5 mt-4 border border-secondary"
+                        style="border-style: dashed !important; background-color: #030303;">
+                        <span class="empty-cart-icon">📦</span>
+                        <h4 class="text-white mb-2 fs-5">No orders yet</h4>
+                        <p class="text-secondary mb-4 x-small text-uppercase letter-spacing-1">When you place an order,
+                            it will appear here.</p>
+                        <a href="{% url 'products' %}" class="btn-black text-uppercase letter-spacing-1 px-4 py-3">Start
+                            Shopping</a>
+                    </div>
+                    {% endif %}
+                </div>
+            </div>
+
+        </div>
+    </div>
+
+    <input type="checkbox" id="cartToggle">
+    <div class="cart-sidebar border-secondary p-4 d-flex flex-column">
+        <div class="d-flex justify-content-between align-items-center mb-4">
+            <h2 class="mb-0 text-white fs-4">Your Cart</h2>
+            <label for="cartToggle" class="fs-2 text-secondary hover-white"
+                style="cursor: pointer; line-height: 1;">&times;</label>
+        </div>
+
+        <div class="cart-items flex-grow-1" style="overflow-y: auto;">
+            {% for item in cart_items %}
+            <div class="d-flex mb-4 pb-4 border-bottom border-secondary">
+                <div class="product-img-wrapper" style="width: 80px; height: 80px; padding: 5px; background: #fff;">
+                    <img src="{{ item.product.image.url }}" alt="{{ item.product.name }}"
+                        style="width: 100%; height: 100%; object-fit: contain;">
+                </div>
+                <div class="w-100 ms-3">
+                    <div class="d-flex justify-content-between align-items-start">
+                        <h6 class="mb-1 text-white fw-normal">{{ item.product.name }}</h6>
+                        <a href="{% url 'remove_from_cart' item.id %}"
+                            class="text-secondary hover-white text-decoration-none fs-5"
+                            style="line-height: 1;">&times;</a>
+                    </div>
+                    <div class="d-flex justify-content-between align-items-end mt-3">
+                        <span class="text-secondary x-small text-uppercase">Qty: {{ item.quantity }}</span>
+                        <span class="text-white fw-bold">Rs. {{ item.get_total }}</span>
+                    </div>
+                </div>
+            </div>
+            {% endfor %}
+        </div>
+
+        <div class="mt-auto pt-4 border-top border-secondary">
+            <div class="d-flex justify-content-between mb-4">
+                <span class="text-secondary text-uppercase x-small letter-spacing-1">Subtotal</span>
+                <span class="fw-bold text-white fs-5">Rs. {{ cart_total|default:"0" }}</span>
+            </div>
+            <a href="{% url 'checkout' %}"
+                class="btn-black text-uppercase text-center text-decoration-none d-block letter-spacing-1 py-3">Checkout</a>
+        </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+</body>
+
+</html>
