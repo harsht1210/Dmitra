@@ -1,0 +1,581 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>D. Mitra | Smart Living Hub</title>
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=Jost:wght@300;400;500;600&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="{% static 'css/style.css' %}">
+
+  <style>
+    #cartToggle {
+      display: none !important;
+    }
+
+
+    .nav-link:hover {
+      opacity: 0.7;
+    }
+
+    .cart-overlay {
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100vw;
+      height: 100vh;
+      background-color: rgba(0, 0, 0, 0.6);
+      z-index: 1040;
+      visibility: hidden;
+      opacity: 0;
+      transition: opacity 0.3s ease, visibility 0.3s ease;
+      cursor: pointer;
+    }
+
+    .cart-sidebar {
+      position: fixed;
+      top: 0;
+      right: -450px;
+      width: 400px;
+      max-width: 100%;
+      height: 100vh;
+      background-color: #000000;
+      z-index: 1050;
+      box-shadow: -5px 0 25px rgba(0, 0, 0, 0.15);
+      transition: right 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+      display: flex;
+      flex-direction: column;
+    }
+
+    #cartToggle:checked~.cart-overlay {
+      visibility: visible;
+      opacity: 1;
+    }
+
+    #cartToggle:checked~.cart-sidebar {
+      right: 0;
+    }
+
+    .cart-header {
+      padding: 1.5rem;
+      border-bottom: 1px solid #eeeeee;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+
+    .section-split {
+      display: flex;
+      flex-wrap: wrap;
+      width: 100%;
+      min-height: 600px;
+      border-radius: 16px 16px 16px 16px;
+      overflow: hidden;
+    }
+
+    .cart-close-lbl {
+      font-size: 1.8rem;
+      font-weight: 300;
+      cursor: pointer;
+      line-height: 1;
+      transition: color 0.2s;
+      margin-bottom: 0;
+    }
+
+    .cart-close-lbl:hover {
+      color: #dc3545;
+    }
+
+    .cart-body {
+      padding: 1.5rem;
+      flex-grow: 1;
+      overflow-y: auto;
+    }
+
+    .cart-item-row {
+      display: flex;
+      margin-bottom: 1.5rem;
+      padding-bottom: 1.5rem;
+      border-bottom: 1px solid #f0f0f0;
+    }
+
+    .cart-item-img {
+      width: 80px;
+      height: 80px;
+      object-fit: cover;
+      border-radius: 8px;
+      margin-right: 15px;
+      border: 1px solid #eee;
+    }
+
+    .cart-item-details {
+      flex-grow: 1;
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+    }
+
+    .cart-footer {
+      padding: 1.5rem;
+      border-top: 1px solid #eeeeee;
+      box-shadow: 0 -4px 15px rgba(0, 0, 0, 0.03);
+    }
+
+    .btn-checkout {
+      background-color: #ffffff;
+      color: #000000;
+      padding: 12px;
+      border-radius: 4px;
+      font-weight: 500;
+      letter-spacing: 1px;
+      text-transform: uppercase;
+      transition: background-color 0.3s, transform 0.1s;
+      display: block;
+      text-align: center;
+      text-decoration: none;
+    }
+
+    .btn-checkout:hover {
+      background-color: #333;
+      color: #fff;
+      transform: translateY(-2px);
+    }
+  </style>
+
+</head>
+
+<body>
+  <nav class="navbar navbar-expand-lg">
+    <div class="container-fluid d-flex justify-content-between align-items-center">
+
+      <div class="d-none d-lg-flex" style="flex: 1;">
+        <ul class="navbar-nav gap-4">
+          <li class="nav-item"><a class="nav-link text-white p-0" href="{% url 'products' %}">Shop</a></li>
+          <li class="nav-item"><a class="nav-link text-white p-0" href="{% url 'about' %}">About</a></li>
+          <li class="nav-item"><a class="nav-link text-white p-0" href="{% url 'contact' %}">Contact</a></li>
+        </ul>
+      </div>
+
+      <div class="text-center" style="flex: 1;">
+        <a class="text-white text-decoration-none mx-0" href="{% url 'home' %}">D. Mitra</a>
+      </div>
+
+      <div class="d-none d-lg-flex justify-content-end" style="flex: 1;">
+        <ul class="navbar-nav align-items-center gap-4">
+          {% if user.is_authenticated %}
+          <li class="nav-item">
+            <a href="{% url 'profile' %}" class="nav-link text-white p-0 text-decoration-none" style="cursor: pointer;">
+              Hi, {{ user.first_name|default:user.username|lower }}
+            </a>
+          </li>
+          <li class="nav-item">
+            <a class="nav-link text-white text-opacity-75 p-0" href="{% url 'logout' %}">Log Out</a>
+          </li>
+          {% else %}
+          <li class="nav-item"><a class="nav-link text-white p-0" href="{% url 'login' %}">Log In</a></li>
+          {% endif %}
+
+          <li class="nav-item">
+            <label for="cartToggle" class="nav-link text-white p-0 m-0">
+              Cart ({{ cart_items_count|default:"0" }})
+            </label>
+          </li>
+        </ul>
+      </div>
+
+      <button class="navbar-toggler bg-black border-0 shadow-none d-lg-none" type="button" data-bs-toggle="collapse"
+        data-bs-target="#mobileMenu">
+        <span class="navbar-toggler-icon" style="filter: invert(1);"></span>
+      </button>
+    </div>
+
+    <div class="collapse navbar-collapse bg-black d-lg-none" id="mobileMenu">
+      <ul class="navbar-nav text-center  gap-3 d-lg-none">
+        <li class="nav-item"><a class="nav-link text-white" href="{% url 'products' %}">Shop</a></li>
+        <li class="nav-item"><a class="nav-link text-white" href="{% url 'about' %}">About</a></li>
+        <li class="nav-item"><a class="nav-link text-white" href="{% url 'contact' %}">Contact</a></li>
+        <li class="nav-item">
+          <label for="cartToggle" class="nav-link text-white m-0">
+            Cart ({{ cart_items_count|default:"0" }})
+          </label>
+        </li>
+      </ul>
+    </div>
+  </nav>
+
+  <input type="checkbox" id="cartToggle">
+  <label for="cartToggle" class="cart-overlay"></label>
+
+  <div class="cart-sidebar">
+    <div class="cart-header">
+      <h4 class="text-white">Cart ({{ cart_items_count|default:"0" }})</h4>
+      <label for="cartToggle" class="cart-close-lbl text-white">&times;</label>
+    </div>
+
+    <div class="cart-body">
+      {% if cart_items %}
+      {% for item in cart_items %}
+      <div class="cart-item-row" style="position: relative;">
+        <a href="{% url 'remove_from_cart' item.id %}" class="cart-item-delete" title="Remove Item"
+          style="position: absolute; right: 0; top: 0; color: #ff4d4d; text-decoration: none; font-size: 1.2rem;">
+          <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" fill="currentColor" viewBox="0 0 16 16">
+            <path
+              d="M5.5 5.5A.5.5 0 0 1 6 6v6a.5.5 0 0 1-1 0V6a.5.5 0 0 1 .5-.5zm2.5 0a.5.5 0 0 1 .5.5v6a.5.5 0 0 1-1 0V6a.5.5 0 0 1 .5-.5zm3 .5a.5.5 0 0 0-1 0v6a.5.5 0 0 0 1 0V6z" />
+            <path fill-rule="evenodd"
+              d="M14.5 3a1 1 0 0 1-1 1H13v9a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V4h-.5a1 1 0 0 1-1-1V2a1 1 0 0 1 1-1H6a1 1 0 0 1 1-1h2a1 1 0 0 1 1 1h3.5a1 1 0 0 1 1 1v1zM4.118 4 4 4.059V13a1 1 0 0 0 1 1h6a1 1 0 0 0 1-1V4.059L11.882 4H4.118zM2.5 3V2h11v1h-11z" />
+          </svg>
+        </a>
+
+        <img src="{{ item.product.image.url }}" alt="{{ item.product.name }}" class="cart-item-img">
+
+        <div class="cart-item-details">
+          <h6 class="mb-1 text-white fw-bold" style="font-size: 0.95rem; padding-right: 25px;">
+            {{item.product.name }}
+          </h6>
+
+          <div class="small mb-2">
+            {% if item.product.stock_record.in_stock %}
+            <span class="text-success" style="font-size: 0.8rem;">● In Stock</span>
+            {% else %}
+            <span class="text-danger" style="font-size: 0.8rem;">● Out of Stock</span>
+            {% endif %}
+          </div>
+
+          <div class="d-flex justify-content-between text-muted small mt-2">
+            <span class="text-white">Qty: {{ item.quantity }}</span>
+            <span class="fw-bold text-white">Rs.{{ item.get_total }}</span>
+          </div>
+        </div>
+      </div>
+      {% endfor %}
+      {% else %}
+      <div class="text-center mt-5">
+        <p class="text-white">Your cart is currently empty.</p>
+        <label for="cartToggle" class="btn btn-outline-light mt-3" style="cursor: pointer;">Continue
+          Shopping</label>
+      </div>
+      {% endif %}
+    </div>
+
+    {% if cart_items %}
+    <div class="cart-footer">
+      <div class="d-flex justify-content-between fw-bold mb-3 text-dark fs-5">
+        <span class="text-white">Subtotal:</span>
+        <span class="text-white">Rs.{{ cart_total }}</span>
+      </div>
+      <a href="{% url 'checkout' %}" class="btn-checkout">Proceed to Checkout</a>
+    </div>
+    {% endif %}
+  </div>
+
+  <section class="hero-section">
+    <div class="hero-video-container">
+      <video autoplay muted loop playsinline>
+        <source src="{% static 'illustration/Video/Headphone.mp4' %}" type="video/mp4">
+        Your browser does not support the video tag.
+      </video>
+    </div>
+    <div class="hero-content">
+      <h1 class="hero-title">Smart Living Hub</h1>
+      <p class="hero-subtitle">From smart TVs and kitchen gadgets to personal devices, we offer a curated collection
+        of
+        innovative products.</p>
+      <a href="{% url 'products' %}" class="btn btn-pill-white">Shop Now</a>
+    </div>
+  </section>
+
+  <div class="section-split">
+    <div class="half-width">
+      <img src="{% static 'illustration/Images/Img1.jpg' %}" alt="Controller" class="img-cover">
+    </div>
+    <div class="half-width gradient-bg">
+      <div class="content-box">
+        <h2>About</h2>
+        <p>D. Mitra is your go-to online electronics store, dedicated to providing a wide range of consumer
+          electronics.
+          Our focus on industry trends and innovation ensures that you have access to cutting-edge products.</p>
+        <div><a href="#" class="btn btn-pill-white">Learn More</a></div>
+      </div>
+    </div>
+  </div>
+
+  <section class="products-section overflow-hidden">
+    <div class="container-fluid p-0">
+      <h3 class="mb-4 font-weight-normal container">Related Products</h3>
+
+      <div class="position-relative">
+
+        <button class="slider-nav-btn prev-btn" id="slidePrev">&#10094;</button>
+
+        <div class="slider-container px-4" id="productSlider">
+
+          {% for product in featured_products %}
+          <div class="slider-item">
+            <div class="product-card h-100">
+              <div class="product-img-wrapper">
+                <img src="{{ product.image.url }}" alt="{{ product.name }}">
+                <div class="quick-view-overlay">
+                  <button class="quick-view-btn" data-bs-toggle="modal" data-bs-target="#quickViewModal"
+                    data-title="{{ product.name }}" data-price="Rs.{{ product.price }}"
+                    data-img="{{ product.image.url }}" data-product-id="{{ product.id }}"> Quick View
+                  </button>
+                </div>
+              </div>
+              <div class="product-info">
+                <h6 class="mb-0">{{ product.name }}</h6>
+                <div class="product-price">Rs.{{ product.price }}</div>
+              </div>
+            </div>
+          </div>
+          {% empty %}
+          <p class="text-center w-100">Loading new products soon...</p>
+          {% endfor %}
+
+        </div>
+        <button class="slider-nav-btn next-btn" id="slideNext">&#10095;</button>
+      </div>
+    </div>
+  </section>
+
+
+  <div class="modal fade" id="quickViewModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered modal-lg">
+      <div class="modal-content">
+        <div class="modal-body">
+          <button type="button" class="btn-close position-absolute top-0 end-0 m-3" data-bs-dismiss="modal"
+            aria-label="Close"></button>
+          <div class="row g-0">
+            <div class="col-md-6">
+              <img id="modalImg" src="" alt="Product" class="quick-view-modal-img">
+            </div>
+            <div class="col-md-6 d-flex align-items-center">
+              <div class="quick-view-details text-start w-100">
+                <h3 id="modalTitle" class="mb-2">Product Name</h3>
+                <p id="modalPrice" class="text-muted mb-4 text-start">Rs.0.00</p>
+
+                <form id="quickViewForm" action="" method="POST">
+                  {% csrf_token %}
+                  <div class="mb-3">
+                    <label class="small text-muted d-block mb-1 text-start">Quantity</label>
+                    <div class="d-flex text-start">
+                      <input type="number" name="quantity" value="1" min="1" class="qty-input">
+                    </div>
+                  </div>
+                  <button type="submit" class="btn btn-black w-100 rounded-0 mt-3 text-white">Add to Cart</button>
+                </form>
+                <a href="" class="d-block mt-3 small text-muted text-decoration-underline text-start">View More
+                  Details</a>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <section class="showcase-section col-12 col-lg-12">
+    <img src="{% static 'illustration/Images/Img2.jpg' %}" alt="Speaker" class="showcase-bg">
+    <div class="showcase-overlay">
+      <h2 class="text-white mb-0 col-6">Product Showcase</h2>
+      <a href="{% url 'products' %}" class="btn btn-pill-white">Shop Now</a>
+    </div>
+  </section>
+
+  <div class="section-split">
+    <div class="half-width bg-white text-dark">
+      <div class="content-box">
+        <h2>Personal Devices</h2>
+        <p>Stay connected and productive with our array of personal devices that cater to your everyday needs. Quality
+          and performance guaranteed.</p>
+        <div><a href="{% url 'products' %}" class="btn btn-black text-white rounded-pill px-4">Shop Now</a></div>
+      </div>
+    </div>
+    <div class="half-width">
+      <img src="{% static 'illustration/Images/Img3.jpg' %}" alt="Laptop" class="img-cover">
+    </div>
+  </div>
+
+  <div class="section-split">
+    <div class="half-width">
+      <img src="{% static 'illustration/Images/Img4.jpg' %}" alt="Toaster" class="img-cover">
+    </div>
+    <div class="half-width gradient-bg">
+      <div class="content-box">
+        <h2>Kitchen Gadget</h2>
+        <p>Elevate your culinary skills with our selection of kitchen gadgets designed to make cooking a joyous
+          experience.</p>
+        <div><a href="#" class="btn btn-pill-white">Learn More</a></div>
+      </div>
+    </div>
+  </div>
+
+  <div class="section-split">
+    <div class="half-width">
+      <div class="content-box">
+        <h2>Accessories</h2>
+        <p>Elevate your culinary skills with our selection of kitchen gadgets designed to make cooking a joyous
+          experience.</p>
+        <div><a href="#" class="btn btn-pill-white">Learn More</a></div>
+      </div>
+    </div>
+    <div class="half-width">
+      <img src="{% static 'illustration/Images/Img5.jpg' %}" alt="Smart Device" class="img-cover">
+    </div>
+  </div>
+
+  <div class="section-split">
+    <div class="half-width">
+      <img src="{% static 'illustration/Images/Img6.jpg' %}" alt="VR Man" class="img-cover">
+    </div>
+    <div class="half-width bg-white text-dark">
+      <div class="content-box">
+        <h2>Contact Us</h2>
+        <p class="text-muted-50 small">Reach out to us for inquiries or assistance</p>
+        <form>
+          <div class="row">
+            <div class="col-6"><input type="text" class="contact-input form-control" placeholder="First Name *"></div>
+            <div class="col-6"><input type="text" class="contact-input form-control" placeholder="Last Name *"></div>
+          </div>
+          <div class="row">
+            <div class="col-6"><input type="email" class="contact-input form-control" placeholder="Email *"></div>
+            <div class="col-6"><input type="tel" class="contact-input form-control" placeholder="Phone"></div>
+          </div>
+          <input type="text" class="contact-input form-control" placeholder="Message *">
+          <button class="btn btn-black  text-white">Submit</button>
+        </form>
+      </div>
+    </div>
+  </div>
+
+  <footer class="bg-black text-white py-5">
+    <div class="container">
+      <div class="row">
+        <div class="col-md-3">
+          <h5 class="mb-4">D. Mitra</h5>
+        </div>
+        <div class="col-md-3">
+          <h6 class="mb-3">Shop</h6>
+          <ul class="list-unstyled  small">
+            <li><a href="#" class="text-decoration-none text-white">All Products</a></li>
+            <li><a href="#" class="text-decoration-none text-white">Best Sellers</a></li>
+          </ul>
+        </div>
+        <div class="col-md-3">
+          <h6 class="mb-3">Policy</h6>
+          <ul class="list-unstyled text-muted small">
+            <li><a href="#" class="text-decoration-none text-white">Shipping & Returns</a></li>
+            <li><a href="#" class="text-decoration-none text-white">Store Policy</a></li>
+          </ul>
+        </div>
+        <div class="col-md-3">
+          <h6 class="mb-3">Contact</h6>
+          <ul class="list-unstyled text-white  small">
+            <a href="#" class="text-decoration-none text-white">
+              <li>123-456-7890</li>
+            </a>
+            <a href="#" class="text-decoration-none text-white">
+              <li>info@dmitra.com</li>
+            </a>
+            <div class="mt-2"><a href="#" class="text-decoration-none text-white">
+                <li>500 Terry Francois St.<br>San Francisco, CA 94158</li>
+              </a></div>
+          </ul>
+        </div>
+      </div>
+      <div class="row mt-5">
+        <div class="col text-white small">© 2035 by D. Mitra. Powered by Code.</div>
+      </div>
+    </div>
+  </footer>
+
+  <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+
+  <script src="{% static 'js/script.js' %}"></script>
+  <script>
+    document.addEventListener('DOMContentLoaded', function () {
+
+      const productSlider = document.getElementById('productSlider');
+      const slidePrev = document.getElementById('slidePrev');
+      const slideNext = document.getElementById('slideNext');
+
+      if (productSlider && slidePrev && slideNext) {
+
+        const scrollAmount = 304;
+
+        slidePrev.addEventListener('click', () => {
+          productSlider.scrollBy({
+            left: -scrollAmount,
+            behavior: 'smooth'
+          });
+        });
+
+        slideNext.addEventListener('click', () => {
+          productSlider.scrollBy({
+            left: scrollAmount,
+            behavior: 'smooth'
+          });
+        });
+      }
+    });
+
+    document.addEventListener("DOMContentLoaded", function () {
+
+      // 1. QUICK VIEW MODAL LOGIC
+      const quickViewModal = document.getElementById('quickViewModal');
+      const quickViewForm = document.getElementById('quickViewForm');
+
+      if (quickViewModal) {
+        quickViewModal.addEventListener('show.bs.modal', event => {
+          const button = event.relatedTarget;
+
+          const title = button.getAttribute('data-title');
+          const price = button.getAttribute('data-price');
+          const img = button.getAttribute('data-img');
+          const productId = button.getAttribute('data-product-id');
+
+          quickViewModal.querySelector('#modalTitle').textContent = title;
+          quickViewModal.querySelector('#modalPrice').textContent = price;
+          quickViewModal.querySelector('#modalImg').src = img;
+
+          // THE FIX: Changed add_to_cart to add-to-cart
+          if (productId && quickViewForm) {
+            quickViewForm.action = `/add-to-cart/${productId}/`;
+          }
+        });
+      }
+
+      // 2. CART SIDEBAR LOGIC
+      const openCartBtn = document.getElementById('openCartBtn');
+      const closeCartBtn = document.getElementById('closeCartBtn');
+      const cartSidebar = document.getElementById('cartSidebar');
+      const cartOverlay = document.getElementById('cartOverlay');
+
+      if (openCartBtn && cartSidebar && cartOverlay) {
+        openCartBtn.addEventListener('click', (e) => {
+          e.preventDefault();
+          cartSidebar.classList.add('active');
+          cartOverlay.classList.add('active');
+        });
+      }
+
+      if (closeCartBtn && cartSidebar && cartOverlay) {
+        closeCartBtn.addEventListener('click', () => {
+          cartSidebar.classList.remove('active');
+          cartOverlay.classList.remove('active');
+        });
+      }
+
+      if (cartOverlay && cartSidebar) {
+        cartOverlay.addEventListener('click', () => {
+          cartSidebar.classList.remove('active');
+          cartOverlay.classList.remove('active');
+        });
+      }
+    });
+
+  </script>
+</body>
+
+</html>
